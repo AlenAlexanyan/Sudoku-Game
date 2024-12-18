@@ -1,11 +1,11 @@
-#include "sudoku.h"
+#include "Sudoku.h"
 #include <string>
 
 Sudoku::Sudoku() {
     CheckingSize();
-    Board.resize(size, std::vector<int>(size));
-    ColumnBoard.resize(size, std::vector<bool>(size, true));
-    SquareBoard.resize(size, std::vector<bool>(size, true));
+    Board.resize(size,std::vector<int>(size));
+    ColumnBoard.resize(size,std::vector<bool>(size,true));
+    SquareBoard.resize(size,std::vector<bool>(size,true));
     NumberCount.resize(size);
     Play();
 }
@@ -46,11 +46,12 @@ void Sudoku::Generator() {
 
     for (size_t i = 0; i < size; i++) {
         std::vector<int> numbers(size, true);
-        for (size_t j = 0; j < ColumnBoard[i]; j++) {
+        for (int j = 0; j < NumberCount[i]; j++) {
             while (true) {
                 int index = std::rand() % (size) + 1;
                 int el = std::rand() % (size);
                 if (numbers[el - 1] && ColumnBoard[el - 1][index] && SquareBoard[3 * (i / 3) + index / 3][el - 1]){
+                    Board[i][index] = el;
                     break;
                 }
             }
@@ -58,22 +59,22 @@ void Sudoku::Generator() {
     }
 }
 
-bool Sudoku::IsSelectNumberCount() const
+bool Sudoku::IsSelectNumberCount() 
 {
     if (IsGiveMeBoard())
     {
         NumberCount.clear();
         return false;
     }
-    std::cout << "Do you want choose count of numbers\n
-        If you want choose click 1\n
-            Otherwise click 0\n ";
-        unsigned ans;
-    while (true)
-    {
+    std::cout << "Do you want choose count of numbers\n" 
+              << "If you want choose click 1\n" 
+              << "Otherwise click 0\n ";
+    unsigned ans;
+    while (true) {
         std::cin >> ans;
-        if (ans > 1)
-        {
+        if (std::cin.fail() ||  ans > 1) {
+            std::cin.clear();
+            std::cin.ignore(std::numeric_limits<std::streamsize>::max(),'\n');
             std::cout << "Please click only 1 or 0\n";
         }
 
@@ -83,37 +84,34 @@ bool Sudoku::IsSelectNumberCount() const
 
 bool Sudoku::IsGiveMeBoard() const
 {
-    std::cout << "Do you give me sudoku board or I generate\n
-        If you give me click 1\n
-            otherwise click 0\n ";
-        unsigned int ans;
+    std::cout << "Do you give me sudoku board or Igenerate\n "
+              << "If you give me click 1\n" 
+              << "otherwise click 0\n";
+    unsigned int ans;
     while (true)
     {
         std::cin >> ans;
-        if (ans > 1)
-        {
+        if (std::cin.fail() || ans > 1) {
+            std::cin.clear();
+            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
             std::cout << "Please click only 1 or 0\n";
         }
         return ans;
     }
 }
 
-void Sudoku::GiveMeBoard()
-{
+void Sudoku::GiveMeBoard() {
     std::cout << "Write your board's numbers\n";
-    for (size_t i = 0; i < size; ++i)
-    {
+    for (size_t i = 0; i < size; ++i) {
         std::vector<int> CheckingRow(size, true);
-        for (size_t j = 0; j < size; ++j)
-        {
+        for (size_t j = 0; j < size; ++j) {
             unsigned short num;
             std::cin >> num;
-            if (typeid(num) != typeid(int) && num > size && num < 0 && CheckingBoard[num])
-            {
+            if (typeid(num) != typeid(int) && num > size && num < 0 && CheckingRow[num]) {
                 std::cout << "Write only valid numbers\n";
                 GiveMeBoard();
             }
-            CheckingBoard[num] = false;
+            CheckingRow[num] = false;
             Board[i][j] = num;
         }
         std::cout << '\n';
@@ -139,16 +137,29 @@ void Sudoku::GiveMeNumberCount()
 void Sudoku::CheckingSize()
 {
     int boardSize;
-    while (true)
-    {
+    while (true) {
+        std::cout << "Enter board size: ";
         std::cin >> boardSize;
-        if (std::sqrt(boarSize) > int(std::sqrt(boarSize)) || typeid(boardSize) != typeid(int))
-        {
-            std::cout << "Give me valid size\n";
+
+        // Check if input is invalid
+        if (std::cin.fail()) {
+            std::cin.clear(); // Clear error state
+            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n'); // Discard invalid input
+            std::cout << "Invalid input. Please enter a number.\n";
+            continue;
         }
+
+        // Check if the number is a perfect square
+        int squareRoot = static_cast<int>(std::sqrt(boardSize));
+        if (squareRoot * squareRoot != boardSize) {
+            std::cout << "The size must be a perfect square. Try again.\n";
+            continue;
+        }
+
+        // Input is valid
         size = boardSize;
-        root = std::sqrt(size);
-        return;
+        root = squareRoot;
+        break;
     }
 }
 

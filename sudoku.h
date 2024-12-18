@@ -13,14 +13,16 @@ private:
     std::vector<std::vector<bool>> ColumnBoard;
     std::vector<std::vector<bool>> SquareBoard;
     std::vector<int> NumberCount;
+
     void Generator();
-    bool IsSelectNumberCount() const; 
+    bool IsSelectNumberCount(); 
     bool IsGiveMeBoard() const;
     void GiveMeBoard();
     void GiveMeNumberCount();
     void CheckingSize();
     void CheckingBoard();
     void GenerateNumberCountRow();
+
 public:
     // Constructor to initialize the board size and allocate memory
     Sudoku();
@@ -29,8 +31,6 @@ public:
     void displayBoard() const;
 
     void Play();
-
-    // Other functions like solving, validating, etc. can be added later
 };
 
 #endif

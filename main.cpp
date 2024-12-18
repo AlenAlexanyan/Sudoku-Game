@@ -1,6 +1,10 @@
 #include <iostream>
-#include "sudoku.h"
+#include "Sudoku.cpp"
+
+
 
 int main() {
-    Sudoku sud;
+    Sudoku s;
+
+    return 0;
 }
