@@ -1,201 +1,217 @@
 #include "Sudoku.h"
-#include <string>
 
+// Constructor
 Sudoku::Sudoku() {
-    CheckingSize();
-    Board.resize(size,std::vector<int>(size));
-    ColumnBoard.resize(size,std::vector<bool>(size,true));
-    SquareBoard.resize(size,std::vector<bool>(size,true));
-    NumberCount.resize(size);
-    Play();
+    validateBoardSize();
+    board.resize(boardSize, std::vector<int>(boardSize, 0));
+    columnFlags.resize(boardSize, std::vector<bool>(boardSize, true));
+    subGridFlags.resize(boardSize, std::vector<bool>(boardSize, true));
+    rowNumberCounts.resize(boardSize, 0);
+    startGame();
 }
 
-// Function to display the current Sudoku board
-void Sudoku::displayBoard() const
-{
-    if (!IsGiveMeBoard()) {
-        for (size_t i = 0; i < size; ++i)
-        {
-            for (size_t j = 0; j < size; ++j)
-            {
-                std::cout << Board[i][j] << '\t';
-            }
-            std::cout << '\n';
+// Displays the Sudoku board
+void Sudoku::displayBoard() const {
+    for (unsigned short i = 0; i < boardSize; ++i) {
+        if (i % subGridSize == 0 && i != 0) {
+            std::cout << "------+-------+------\n"; // Separator between subgrids
         }
+
+        for (unsigned short j = 0; j < boardSize; ++j) {
+            if (j % subGridSize == 0 && j != 0) {
+                std::cout << "| "; // Separator between subgrid columns
+            }
+            if (board[i][j] == 0) {
+                std::cout << ". "; // Represent empty cells with a dot
+            } else {
+                std::cout << board[i][j] << " ";
+            }
+        }
+        std::cout << "\n";
     }
 }
 
-void Sudoku::Play()
-{
-    if (IsGiveMeBoard())
-    {
-        CheckingBoard();
-    }else {
-        Generator();
+// Starts the game
+void Sudoku::startGame() {
+    if (askIfUserProvidesBoard()) {
+        promptUserForBoard();
+        validateUserBoard();
+    } else {
+        generateBoard();
     }
-    
+
     displayBoard();
+    displayColumnFlags();
+    displaySubGridFlags();
 }
 
-void Sudoku::Generator() {
-    if (IsSelectNumberCount()) {
-        GiveMeNumberCount();
-    }else {
-        GenerateNumberCountRow();
-    }
-
-    for (size_t i = 0; i < size; i++) {
-        std::vector<int> numbers(size, true);
-        for (int j = 0; j < NumberCount[i]; j++) {
-            while (true) {
-                int index = std::rand() % (size) + 1;
-                int el = std::rand() % (size);
-                if (numbers[el - 1] && ColumnBoard[el - 1][index] && SquareBoard[3 * (i / 3) + index / 3][el - 1]){
-                    Board[i][index] = el;
-                    break;
-                }
-            }
-        }
-    }
-}
-
-bool Sudoku::IsSelectNumberCount() 
-{
-    if (IsGiveMeBoard())
-    {
-        NumberCount.clear();
-        return false;
-    }
-    std::cout << "Do you want choose count of numbers\n" 
-              << "If you want choose click 1\n" 
-              << "Otherwise click 0\n ";
-    unsigned ans;
+// Prompts user if they want to provide a board
+bool Sudoku::askIfUserProvidesBoard() const {
+    std::cout << "Do you want to provide a Sudoku board? (1 = Yes, 0 = No): ";
+    unsigned int response;
     while (true) {
-        std::cin >> ans;
-        if (std::cin.fail() ||  ans > 1) {
-            std::cin.clear();
-            std::cin.ignore(std::numeric_limits<std::streamsize>::max(),'\n');
-            std::cout << "Please click only 1 or 0\n";
-        }
-
-        return ans;
-    }
-}
-
-bool Sudoku::IsGiveMeBoard() const
-{
-    std::cout << "Do you give me sudoku board or Igenerate\n "
-              << "If you give me click 1\n" 
-              << "otherwise click 0\n";
-    unsigned int ans;
-    while (true)
-    {
-        std::cin >> ans;
-        if (std::cin.fail() || ans > 1) {
+        std::cin >> response;
+        if (std::cin.fail() || response > 1) {
             std::cin.clear();
             std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-            std::cout << "Please click only 1 or 0\n";
+            std::cout << "Please enter 1 (Yes) or 0 (No): ";
+        } else {
+            return response == 1;
         }
-        return ans;
     }
 }
 
-void Sudoku::GiveMeBoard() {
-    std::cout << "Write your board's numbers\n";
-    for (size_t i = 0; i < size; ++i) {
-        std::vector<int> CheckingRow(size, true);
-        for (size_t j = 0; j < size; ++j) {
-            unsigned short num;
+// Prompts user to input the board
+void Sudoku::promptUserForBoard() {
+    std::cout << "Enter your Sudoku board numbers (row by row):\n";
+    for (size_t i = 0; i < boardSize; ++i) {
+        for (size_t j = 0; j < boardSize; ++j) {
+            int num;
             std::cin >> num;
-            if (typeid(num) != typeid(int) && num > size && num < 0 && CheckingRow[num]) {
-                std::cout << "Write only valid numbers\n";
-                GiveMeBoard();
+
+            if (num < 0 || num > boardSize) {
+                std::cout << "Invalid input. Please enter a number between 0 and " << boardSize << ":\n";
+                j--;
+                continue;
             }
-            CheckingRow[num] = false;
-            Board[i][j] = num;
+            board[i][j] = num;
+        }
+    }
+}
+
+// Validates board size input
+void Sudoku::validateBoardSize() {
+    while (true) {
+        std::cout << "Enter board size (must be a perfect square, e.g., 9 for 9x9): ";
+        int inputSize;
+        std::cin >> inputSize;
+
+        if (std::cin.fail()) {
+            std::cin.clear();
+            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+            std::cout << "Invalid input. Please enter a number.\n";
+            continue;
+        }
+
+        int root = static_cast<int>(std::sqrt(inputSize));
+        if (root * root != inputSize) {
+            std::cout << "The size must be a perfect square. Try again.\n";
+            continue;
+        }
+
+        boardSize = inputSize;
+        subGridSize = root;
+        break;
+    }
+}
+
+// Generates a random Sudoku board
+void Sudoku::generateBoard() {
+    if (askIfUserProvidesRowCounts()) {
+        promptUserForRowCounts();
+    } else {
+        generateRandomRowCounts();
+    }
+
+    for (size_t i = 0; i < boardSize; ++i) {
+        std::vector<bool> usedNumbers(boardSize, false);
+        int placedNumbers = 0; // Track numbers placed in the current row
+
+        while (placedNumbers < rowNumberCounts[i]) {
+            int col = std::rand() % boardSize; // Random column
+            int num = std::rand() % boardSize + 1; // Random number (1 to boardSize)
+
+            int subgridIndex = (i / subGridSize) * subGridSize + col / subGridSize;
+
+            // Check if the number can be placed in the cell
+            if (!usedNumbers[num - 1] && columnFlags[col][num - 1] && subGridFlags[subgridIndex][num - 1] && board[i][col] == 0) {
+                board[i][col] = num;
+                usedNumbers[num - 1] = true;
+                columnFlags[col][num - 1] = false;
+                subGridFlags[subgridIndex][num - 1] = false;
+                ++placedNumbers; // Increment the count of placed numbers
+            }
+        }
+    }
+
+}
+
+// Prompts user to input row counts
+void Sudoku::promptUserForRowCounts() {
+    std::cout << "Enter the number of filled cells for each row:\n";
+    for (size_t i = 0; i < boardSize; ++i) {
+        int count;
+        std::cin >> count;
+        if (count < 0 || count > boardSize) {
+            std::cout << "Invalid input. Please enter a number between 0 and " << boardSize << ":\n";
+            --i;
+            continue;
+        }
+        rowNumberCounts[i] = count;
+    }
+}
+
+// Randomly generates row counts
+void Sudoku::generateRandomRowCounts() {
+    for (size_t i = 0; i < boardSize; ++i) {
+        rowNumberCounts[i] = std::rand() % (boardSize + 1);
+        std::cout << rowNumberCounts[i] << '\t' << '\n';
+    }
+}
+
+// Validates the provided Sudoku board
+void Sudoku::validateUserBoard() {
+    for (size_t i = 0; i < boardSize; ++i) {
+        for (size_t j = 0; j < boardSize; ++j) {
+            int num = board[i][j];
+            if (num > 0) {
+                if (!columnFlags[j][num - 1] || !subGridFlags[(i / subGridSize) * subGridSize + j / subGridSize][num - 1]) {
+                    std::cout << "Invalid board. Please re-enter the board.\n";
+                    promptUserForBoard();
+                    validateUserBoard();
+                    return;
+                }
+                columnFlags[j][num - 1] = false;
+                subGridFlags[(i / subGridSize) * subGridSize + j / subGridSize][num - 1] = false;
+            }
+        }
+    }
+}
+
+// Asks user if they want to provide row counts
+bool Sudoku::askIfUserProvidesRowCounts() const {
+    std::cout << "Do you want to provide row counts? (1 = Yes, 0 = No): ";
+    unsigned int response;
+    while (true) {
+        std::cin >> response;
+        if (std::cin.fail() || response > 1) {
+            std::cin.clear();
+            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+            std::cout << "Please enter 1 (Yes) or 0 (No): ";
+        } else {
+            return response == 1;
+        }
+    }
+}
+
+// Displays the columnFlags matrix
+void Sudoku::displayColumnFlags() const {
+    std::cout << "\nColumn Flags Matrix:\n";
+    for (const auto& col : columnFlags) {
+        for (bool flag : col) {
+            std::cout << (flag ? "T" : "F") << ' ';
         }
         std::cout << '\n';
     }
 }
 
-void Sudoku::GiveMeNumberCount()
-{
-    std::cout << "Write every row's numbers count\n";
-    for (size_t i = 0; i < size; i++)
-    {
-        unsigned short num;
-        std::cin >> num;
-        if (typeid(num) != typeid(num) && num > size && num < 0)
-        {
-            std::cout << "Write only valid numbers\n";
-            GiveMeNumberCount();
+// Displays the subGridFlags matrix
+void Sudoku::displaySubGridFlags() const {
+    std::cout << "\nSub-grid Flags Matrix:\n";
+    for (const auto& grid : subGridFlags) {
+        for (bool flag : grid) {
+            std::cout << (flag ? "T" : "F") << ' ';
         }
-        NumberCount[i] = num;
-    }
-}
-
-void Sudoku::CheckingSize()
-{
-    int boardSize;
-    while (true) {
-        std::cout << "Enter board size: ";
-        std::cin >> boardSize;
-
-        // Check if input is invalid
-        if (std::cin.fail()) {
-            std::cin.clear(); // Clear error state
-            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n'); // Discard invalid input
-            std::cout << "Invalid input. Please enter a number.\n";
-            continue;
-        }
-
-        // Check if the number is a perfect square
-        int squareRoot = static_cast<int>(std::sqrt(boardSize));
-        if (squareRoot * squareRoot != boardSize) {
-            std::cout << "The size must be a perfect square. Try again.\n";
-            continue;
-        }
-
-        // Input is valid
-        size = boardSize;
-        root = squareRoot;
-        break;
-    }
-}
-
-void Sudoku::CheckingBoard()
-{
-    for (size_t i = 0; i < size; i++)
-    {
-        for (size_t j = 0; j < size; j++)
-        {
-            if (Board[i][j] > 0)
-            {
-                if (ColumnBoard[Board[i][j] - 1][j])
-                {
-                    ColumnBoard[Board[i][j] - 1][j] = false;
-                }
-                else
-                {
-                    std::cout << "It's invalid board.\nPlease give me another board\n";
-                    GiveMeBoard();
-                }
-                if (SquareBoard[root * (i / 3) + j / 3][Board[i][j] - 1])
-                {
-                    SquareBoard[root * (i / 3) + j / 3][Board[i][j] - 1] = false;
-                }
-                else
-                {
-                    std::cout << "It's invalid board.\nPlease give me another board\n";
-                    GiveMeBoard();
-                }
-            }
-        }
-    }
-}
-
-void Sudoku::GenerateNumberCountRow() {
-    for (size_t i = 0; i < size; i++) {
-        NumberCount[i] = std::rand() % (size + 1);
+        std::cout << '\n';
     }
 }
