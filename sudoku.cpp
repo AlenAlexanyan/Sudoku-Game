@@ -14,15 +14,15 @@ Sudoku::Sudoku() {
 void Sudoku::displayBoard() const {
     for (unsigned short i = 0; i < boardSize; ++i) {
         if (i % subGridSize == 0 && i != 0) {
-            std::cout << "------+-------+------\n"; // Separator between subgrids
+            std::cout << "------+-------+------\n";
         }
 
         for (unsigned short j = 0; j < boardSize; ++j) {
             if (j % subGridSize == 0 && j != 0) {
-                std::cout << "| "; // Separator between subgrid columns
+                std::cout << "| ";
             }
             if (board[i][j] == 0) {
-                std::cout << ". "; // Represent empty cells with a dot
+                std::cout << ". ";
             } else {
                 std::cout << board[i][j] << " ";
             }
@@ -43,6 +43,92 @@ void Sudoku::startGame() {
     displayBoard();
     displayColumnFlags();
     displaySubGridFlags();
+    
+    std::cout << "\nWould you like to solve the board? (1 = Yes, 0 = No): ";
+    int response;
+    std::cin >> response;
+    if (response) {
+        if (solve()) {
+            std::cout << "\nSolved board:\n";
+            displayBoard();
+        } else {
+            std::cout << "\nNo solution exists!\n";
+        }
+    }
+}
+
+// Find empty cell
+bool Sudoku::findEmptyCell(int& row, int& col) const {
+    for (row = 0; row < boardSize; row++) {
+        for (col = 0; col < boardSize; col++) {
+            if (board[row][col] == 0) return true;
+        }
+    }
+    return false;
+}
+
+// Check if placement is valid using existing flag system
+bool Sudoku::isValidPlacement(int row, int col, int num) const {
+    int subgridIndex = (row / subGridSize) * subGridSize + col / subGridSize;
+    return columnFlags[col][num - 1] && subGridFlags[subgridIndex][num - 1];
+}
+
+// Solve the Sudoku using backtracking and existing validation system
+bool Sudoku::solve() {
+    int row, col;
+    
+    // If no empty cell is found, we're done
+    if (!findEmptyCell(row, col)) return true;
+    
+    // Try digits 1 to boardSize
+    for (int num = 1; num <= boardSize; num++) {
+        if (isValidPlacement(row, col, num)) {
+            // Make tentative assignment
+            board[row][col] = num;
+            
+            // Update flags
+            int subgridIndex = (row / subGridSize) * subGridSize + col / subGridSize;
+            columnFlags[col][num - 1] = false;
+            subGridFlags[subgridIndex][num - 1] = false;
+            
+            // Return if success
+            if (solve()) return true;
+            
+            // If failure, unmake & try again
+            board[row][col] = 0;
+            
+            // Reset flags
+            columnFlags[col][num - 1] = true;
+            subGridFlags[subgridIndex][num - 1] = true;
+        }
+    }
+    return false;
+}
+
+// Validates board size input
+void Sudoku::validateBoardSize() {
+    while (true) {
+        std::cout << "Enter board size (must be a perfect square, e.g., 9 for 9x9): ";
+        int inputSize;
+        std::cin >> inputSize;
+
+        if (std::cin.fail()) {
+            std::cin.clear();
+            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+            std::cout << "Invalid input. Please enter a number.\n";
+            continue;
+        }
+
+        int root = static_cast<int>(std::sqrt(inputSize));
+        if (root * root != inputSize || inputSize <= 1) {
+            std::cout << "The size must be a perfect square. Try again.\n";
+            continue;
+        }
+
+        boardSize = inputSize;
+        subGridSize = root;
+        break;
+    }
 }
 
 // Prompts user if they want to provide a board
@@ -79,32 +165,6 @@ void Sudoku::promptUserForBoard() {
     }
 }
 
-// Validates board size input
-void Sudoku::validateBoardSize() {
-    while (true) {
-        std::cout << "Enter board size (must be a perfect square, e.g., 9 for 9x9): ";
-        int inputSize;
-        std::cin >> inputSize;
-
-        if (std::cin.fail()) {
-            std::cin.clear();
-            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-            std::cout << "Invalid input. Please enter a number.\n";
-            continue;
-        }
-
-        int root = static_cast<int>(std::sqrt(inputSize));
-        if (root * root != inputSize) {
-            std::cout << "The size must be a perfect square. Try again.\n";
-            continue;
-        }
-
-        boardSize = inputSize;
-        subGridSize = root;
-        break;
-    }
-}
-
 // Generates a random Sudoku board
 void Sudoku::generateBoard() {
     if (askIfUserProvidesRowCounts()) {
@@ -115,28 +175,47 @@ void Sudoku::generateBoard() {
 
     for (size_t i = 0; i < boardSize; ++i) {
         std::vector<bool> usedNumbers(boardSize, false);
-        int placedNumbers = 0; // Track numbers placed in the current row
+        int placedNumbers = 0;
 
         while (placedNumbers < rowNumberCounts[i]) {
-            int col = std::rand() % boardSize; // Random column
-            int num = std::rand() % boardSize + 1; // Random number (1 to boardSize)
+            int col = std::rand() % boardSize;
+            int num = std::rand() % boardSize + 1;
 
             int subgridIndex = (i / subGridSize) * subGridSize + col / subGridSize;
 
-            // Check if the number can be placed in the cell
-            if (!usedNumbers[num - 1] && columnFlags[col][num - 1] && subGridFlags[subgridIndex][num - 1] && board[i][col] == 0) {
+            if (!usedNumbers[num - 1] && columnFlags[col][num - 1] && 
+                subGridFlags[subgridIndex][num - 1] && board[i][col] == 0) {
                 board[i][col] = num;
                 usedNumbers[num - 1] = true;
                 columnFlags[col][num - 1] = false;
                 subGridFlags[subgridIndex][num - 1] = false;
-                ++placedNumbers; // Increment the count of placed numbers
+                ++placedNumbers;
             }
         }
     }
-
 }
 
-// Prompts user to input row counts
+// Validates the provided Sudoku board
+void Sudoku::validateUserBoard() {
+    for (size_t i = 0; i < boardSize; ++i) {
+        for (size_t j = 0; j < boardSize; ++j) {
+            int num = board[i][j];
+            if (num > 0) {
+                if (!columnFlags[j][num - 1] || 
+                    !subGridFlags[(i / subGridSize) * subGridSize + j / subGridSize][num - 1]) {
+                    std::cout << "Invalid board. Please re-enter the board.\n";
+                    promptUserForBoard();
+                    validateUserBoard();
+                    return;
+                }
+                columnFlags[j][num - 1] = false;
+                subGridFlags[(i / subGridSize) * subGridSize + j / subGridSize][num - 1] = false;
+            }
+        }
+    }
+}
+
+// Prompts user for row counts
 void Sudoku::promptUserForRowCounts() {
     std::cout << "Enter the number of filled cells for each row:\n";
     for (size_t i = 0; i < boardSize; ++i) {
@@ -156,25 +235,6 @@ void Sudoku::generateRandomRowCounts() {
     for (size_t i = 0; i < boardSize; ++i) {
         rowNumberCounts[i] = std::rand() % (boardSize + 1);
         std::cout << rowNumberCounts[i] << '\t' << '\n';
-    }
-}
-
-// Validates the provided Sudoku board
-void Sudoku::validateUserBoard() {
-    for (size_t i = 0; i < boardSize; ++i) {
-        for (size_t j = 0; j < boardSize; ++j) {
-            int num = board[i][j];
-            if (num > 0) {
-                if (!columnFlags[j][num - 1] || !subGridFlags[(i / subGridSize) * subGridSize + j / subGridSize][num - 1]) {
-                    std::cout << "Invalid board. Please re-enter the board.\n";
-                    promptUserForBoard();
-                    validateUserBoard();
-                    return;
-                }
-                columnFlags[j][num - 1] = false;
-                subGridFlags[(i / subGridSize) * subGridSize + j / subGridSize][num - 1] = false;
-            }
-        }
     }
 }
 

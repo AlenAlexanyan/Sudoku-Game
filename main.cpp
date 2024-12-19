@@ -4,7 +4,7 @@
 
 
 int main() {
-    std::srand(std::time(0)); // Seed the random number generator with the current time
+    std::srand(std::time(0));
 
     Sudoku s;
 
