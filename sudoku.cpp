@@ -12,22 +12,32 @@ Sudoku::Sudoku() {
 
 // Displays the Sudoku board
 void Sudoku::displayBoard() const {
-    for (unsigned short i = 0; i < boardSize; ++i) {
-        if (i % subGridSize == 0 && i != 0) {
-            std::cout << "------+-------+------\n";
-        }
+    int cellWidth = 4 ; // Adjusted width for better alignment of larger numbers
+    int gridSeparatorWidth = subGridSize * (cellWidth * subGridSize + subGridSize - 1) - 1;
 
-        for (unsigned short j = 0; j < boardSize; ++j) {
-            if (j % subGridSize == 0 && j != 0) {
-                std::cout << "| ";
+    std::string horizontalSeparator(gridSeparatorWidth, '-');
+
+    for (size_t i = 0; i < boardSize; ++i) {
+        for (size_t j = 0; j < boardSize; ++j) {
+            if (j > 0 && j % subGridSize == 0) {
+                std::cout << " | "; // Vertical separator
             }
             if (board[i][j] == 0) {
-                std::cout << ". ";
+                std::cout << std::setw(cellWidth - 1) << "." << " "; // Align empty cells
             } else {
-                std::cout << board[i][j] << " ";
+                std::cout << std::setw(cellWidth - 1) << board[i][j] << " "; // Align numbers
             }
         }
-        std::cout << "\n";
+        std::cout << '\n';
+
+        // Print horizontal separator for sub-grids
+        if ((i + 1) % subGridSize == 0 && i + 1 < boardSize) {
+            for (int k = 0; k < subGridSize; ++k) {
+                if (k > 0) std::cout << " + "; // Separator between sub-grids
+                std::cout << std::string(subGridSize * cellWidth, '-'); // Sub-grid line
+            }
+            std::cout << '\n';
+        }
     }
 }
 
@@ -45,7 +55,7 @@ void Sudoku::startGame() {
     displaySubGridFlags();
     
     std::cout << "\nWould you like to solve the board? (1 = Yes, 0 = No): ";
-    int response;
+    bool response;
     std::cin >> response;
     if (response) {
         if (solve()) {
@@ -134,15 +144,15 @@ void Sudoku::validateBoardSize() {
 // Prompts user if they want to provide a board
 bool Sudoku::askIfUserProvidesBoard() const {
     std::cout << "Do you want to provide a Sudoku board? (1 = Yes, 0 = No): ";
-    unsigned int response;
+    bool response;
     while (true) {
         std::cin >> response;
-        if (std::cin.fail() || response > 1) {
+        if (std::cin.fail()) {
             std::cin.clear();
             std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
             std::cout << "Please enter 1 (Yes) or 0 (No): ";
         } else {
-            return response == 1;
+            return response;
         }
     }
 }
@@ -241,15 +251,15 @@ void Sudoku::generateRandomRowCounts() {
 // Asks user if they want to provide row counts
 bool Sudoku::askIfUserProvidesRowCounts() const {
     std::cout << "Do you want to provide row counts? (1 = Yes, 0 = No): ";
-    unsigned int response;
+    bool response;
     while (true) {
         std::cin >> response;
-        if (std::cin.fail() || response > 1) {
+        if (std::cin.fail()) {
             std::cin.clear();
             std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
             std::cout << "Please enter 1 (Yes) or 0 (No): ";
         } else {
-            return response == 1;
+            return response;
         }
     }
 }
